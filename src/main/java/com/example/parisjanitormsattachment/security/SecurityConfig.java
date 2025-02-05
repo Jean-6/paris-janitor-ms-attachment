@@ -25,7 +25,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 // Protection against CSRF
-                .csrf(AbstractHttpConfigurer::disable) // Désactive CSRF (à activer en prod)
+                .csrf(AbstractHttpConfigurer::disable) // Disable CSRF on local
                 //.csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())) // To be activated in prod
                 // Secure CORS Configuration
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
