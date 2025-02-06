@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class AwsPropertiesLogger {
 
-    private static final Logger logger = LoggerFactory.getLogger(AwsPropertiesLogger.class);
+    public static final Logger logger = LoggerFactory.getLogger(AwsPropertiesLogger.class);
     private final AwsProperties awsProperties;
 
     public AwsPropertiesLogger(AwsProperties awsProperties) {
