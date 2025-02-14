@@ -30,7 +30,7 @@ public class SecurityConfig {
                 // Secure CORS Configuration
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api-docs","/swagger-ui/index.html").permitAll()
+                        .requestMatchers("/api/img/**","/api-docs","/swagger-ui/index.html").permitAll()
                         .anyRequest().authenticated()
                 )
                 .httpBasic(Customizer.withDefaults()); // Enable Basic Auth
