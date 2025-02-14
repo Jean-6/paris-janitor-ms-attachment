@@ -14,6 +14,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 
 @Slf4j
@@ -27,35 +28,55 @@ public class S3ServiceImpl implements S3Service {
 
     @Override
     public List<String> getImages(String propertyId) {
+
         ListObjectsV2Request request = ListObjectsV2Request.builder()
                 .bucket(bucketName)
-                .prefix(propertyId+"/images/")
+                .prefix("properties/"+propertyId)
                 .build();
         ListObjectsV2Response listObjectsV2Response = s3Client.listObjectsV2(request);
-        List<String> fileNames = new ArrayList<>();
-        listObjectsV2Response.contents().forEach(s3Object -> fileNames.add(s3Object.key()));
-        return fileNames;
+        return  listObjectsV2Response.contents().stream()
+                .map(s3Object -> "https://" + bucketName + "s3.amazonaws.com/" + s3Object.key())
+                .collect(Collectors.toList());
+
     }
 
     @Override
-    public List<String> uploadImages(String propertyId, List<MultipartFile> images) {
-        List<String> fileUrls = new ArrayList<>();
-        for (MultipartFile image : images) {
-            try {
-                String fileName = "properties/" + propertyId + "/" + image.getOriginalFilename();
+    public String uploadImages(String propertyId, MultipartFile img) {
+        String fileUrl = "";
+        String filename = img.getOriginalFilename();
+        try{
+            String imgFile = "properties/" + propertyId + "/" + img.getOriginalFilename();
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(imgFile)
+                    .contentType(img.getContentType())
+                    .build();
+            s3Client.putObject(putObjectRequest,RequestBody.fromBytes(img.getBytes()));
+            fileUrl = "https://" + bucketName + ".s3.amazonaws.com/"+ filename;
+        }catch(Exception ex){
+            log.error(ex.getMessage());
+            throw new RuntimeException("",ex);
+        }
+        return fileUrl;
+    }
 
+    @Override
+    public List<String> uploadImages(String propertyId, List<MultipartFile> imgs) {
+        List<String> fileUrls = new ArrayList<>();
+        for (MultipartFile img : imgs) {
+            try {
+                String fileName = "properties/" + propertyId + "/" + img.getOriginalFilename();
                 PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                         .bucket(bucketName)
                         .key(fileName)
-                        .contentType(image.getContentType())
+                        .contentType(img.getContentType())
                         .build();
-
-                s3Client.putObject(putObjectRequest, RequestBody.fromBytes(image.getBytes()));
+                s3Client.putObject(putObjectRequest, RequestBody.fromBytes(img.getBytes()));
                 String fileUrl = "https://" + bucketName +".s3.amazonaws.com/"+ fileName;
                 fileUrls.add(fileUrl);
             }catch (Exception e){
                 log.error(e.getMessage());
-                throw new RuntimeException("Erreur lors de l'upload du fichier :" + image.getOriginalFilename(),e);
+                throw new RuntimeException("Erreur lors de l'upload du fichier :" + img.getOriginalFilename(),e);
             }
         }
         return fileUrls;
