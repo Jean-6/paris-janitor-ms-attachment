@@ -16,7 +16,7 @@ public class SwaggerConfig {
         return new OpenAPI()
                 .info(new Info().description("API Documentation")
                         .version("1.0.0")
-                        .description("Documentation de l'API REST de Gestion de fichier")
+                        .description("Documentation d'API REST - Gestion de fichier")
                         .contact(new Contact()
                                 .name("Jaures Support Dev")
                                 .email("oka.jeanjaures@gmail.com")
