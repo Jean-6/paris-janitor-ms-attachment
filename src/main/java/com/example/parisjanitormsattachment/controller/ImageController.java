@@ -1,7 +1,6 @@
 package com.example.parisjanitormsattachment.controller;
 
-import com.example.parisjanitormsattachment.exception.FileDownloadException;
-import com.example.parisjanitormsattachment.exception.FileUploadException;
+import com.example.parisjanitormsattachment.exception.ResourceNotFoundException;
 import com.example.parisjanitormsattachment.service.impl.S3ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,8 +23,6 @@ public class ImageController {
     @Autowired
     private S3ServiceImpl imageService;
 
-
-
     @PostMapping(value = "/upload/{propId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> upload(@RequestParam("files") MultipartFile[] files, @PathVariable String propId) {
         StringBuilder result = new StringBuilder();
@@ -34,7 +31,7 @@ public class ImageController {
                 if(propId.isBlank()) return new ResponseEntity<>("Property ID is invalid", HttpStatus.BAD_REQUEST);
                 String filename = imageService.uploadImages(propId,file);
                 result.append(filename).append("\n");
-            }catch (FileUploadException ex){
+            }catch (RuntimeException ex){
                 return new ResponseEntity<>("Failed to upload files "+ex.getMessage(),HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }
@@ -49,7 +46,7 @@ public class ImageController {
             fileUrls = imageService.getImages(propId);
             if(fileUrls.isEmpty()) return new ResponseEntity<>("No image found", HttpStatus.NOT_FOUND);
             return new ResponseEntity<>(fileUrls, HttpStatus.OK);
-        }catch(FileDownloadException ex){
+        }catch(ResourceNotFoundException ex){
             return new ResponseEntity<>("Failed to download files "+ ex.getMessage(),HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
