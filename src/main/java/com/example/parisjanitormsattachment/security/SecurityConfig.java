@@ -4,7 +4,6 @@ package com.example.parisjanitormsattachment.security;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -17,7 +16,6 @@ import java.util.Collections;
 import java.util.List;
 
 @Configuration
-@EnableMethodSecurity
 @EnableWebSecurity
 public class SecurityConfig {
 
@@ -30,7 +28,7 @@ public class SecurityConfig {
                 // Secure CORS Configuration
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/img/**","/api-docs","/swagger-ui/index.html").permitAll()
+                        .requestMatchers("/api/img/**","/api-docs","/openapi","/swagger-ui/index.html").permitAll()
                         .anyRequest().authenticated()
                 )
                 .httpBasic(Customizer.withDefaults()); // Enable Basic Auth
@@ -39,11 +37,11 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Collections.singletonList("*")); // Authorized domain ex :"https://mon-site-securise.com"
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE")); // Authorized HTTP methods
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type")); // Authorized headers
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
