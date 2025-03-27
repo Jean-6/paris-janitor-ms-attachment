@@ -6,20 +6,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
-import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 
 @Slf4j
 @Service
 public class S3ServiceImpl implements S3Service {
+
 
     @Value("${aws.s3-bucket-name}")
     private String bucketName;
@@ -27,59 +27,55 @@ public class S3ServiceImpl implements S3Service {
     private S3Client s3Client;
 
     @Override
-    public List<String> getImages(String propertyId) {
-
+    public Flux<String> getImages(String propertyId) {
         ListObjectsV2Request request = ListObjectsV2Request.builder()
                 .bucket(bucketName)
                 .prefix("properties/"+propertyId)
                 .build();
-        ListObjectsV2Response listObjectsV2Response = s3Client.listObjectsV2(request);
-        return  listObjectsV2Response.contents().stream()
-                .map(s3Object -> "https://" + bucketName + "s3.amazonaws.com/" + s3Object.key())
-                .collect(Collectors.toList());
+        return Mono.fromCallable(()-> s3Client.listObjectsV2(request))
+                .flatMapMany(response -> Flux.fromIterable(response.contents()))
+                .map(s3Object -> "https://" + "s3.amazonaws.com/" + s3Object.key());
 
     }
-
     @Override
-    public String uploadImages(String propertyId, MultipartFile img) {
-        String fileUrl = "";
-        String filename = img.getOriginalFilename();
+    public Mono<String> uploadImages(String propertyId, MultipartFile image) {
+        return Mono.fromCallable(()->{
+
+                String fileUrl = "";
+                String filename = image.getOriginalFilename();
         try{
-            String imgFile = "properties/" + propertyId + "/" + img.getOriginalFilename();
+            String imgFile = "properties/" + propertyId + "/" + image.getOriginalFilename();
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(bucketName)
                     .key(imgFile)
-                    .contentType(img.getContentType())
+                    .contentType(image.getContentType())
                     .build();
-            s3Client.putObject(putObjectRequest,RequestBody.fromBytes(img.getBytes()));
+            s3Client.putObject(putObjectRequest,RequestBody.fromBytes(image.getBytes()));
             fileUrl = "https://" + bucketName + ".s3.amazonaws.com/"+ filename;
         }catch(Exception ex){
             log.error(ex.getMessage());
             throw new RuntimeException("",ex);
         }
         return fileUrl;
+        });
     }
 
+
     @Override
-    public List<String> uploadImages(String propertyId, List<MultipartFile> imgs) {
-        List<String> fileUrls = new ArrayList<>();
-        for (MultipartFile img : imgs) {
-            try {
-                String fileName = "properties/" + propertyId + "/" + img.getOriginalFilename();
-                PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                        .bucket(bucketName)
-                        .key(fileName)
-                        .contentType(img.getContentType())
-                        .build();
-                s3Client.putObject(putObjectRequest, RequestBody.fromBytes(img.getBytes()));
-                String fileUrl = "https://" + bucketName +".s3.amazonaws.com/"+ fileName;
-                fileUrls.add(fileUrl);
-            }catch (Exception e){
-                log.error(e.getMessage());
-                throw new RuntimeException("Erreur lors de l'upload du fichier :" + img.getOriginalFilename(),e);
-            }
-        }
-        return fileUrls;
+    public Flux<String> uploadImages(String propertyId, List<MultipartFile> images) {
+        return Flux.fromIterable(images)
+                .flatMap(image -> {
+                    return Mono.fromCallable(()->{
+                        String filename = "";
+                        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                                .bucket(bucketName)
+                                .key(filename)
+                                .contentType(image.getContentType())
+                                .build();
+                        s3Client.putObject(putObjectRequest, RequestBody.fromBytes(image.getBytes()));
+                        return "https://" + bucketName +".s3.amazonaws.com/"+ filename;
+                    }).onErrorMap(e-> new RuntimeException(""));
+                });
     }
 
 }
