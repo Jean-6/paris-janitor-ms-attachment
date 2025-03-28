@@ -1,15 +1,14 @@
 package com.example.parisjanitormsattachment.service;
 
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.codec.multipart.FilePart;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
 
 public interface S3Service {
 
     Flux<String> getImages(String propertyId);
-    Mono<String> uploadImages(String propertyId, MultipartFile image);
-    Flux<String> uploadImages(String propertyId, List<MultipartFile> images);
+    Mono<String> uploadImage(String propertyId, FilePart filePart);
+    Flux<String> uploadImages(String propertyId, Flux<FilePart> fileParts);
 
 }

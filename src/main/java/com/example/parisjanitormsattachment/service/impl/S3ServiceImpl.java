@@ -4,17 +4,17 @@ import com.example.parisjanitormsattachment.service.S3Service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-import java.util.List;
-
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -25,6 +25,9 @@ public class S3ServiceImpl implements S3Service {
     private String bucketName;
     @Autowired
     private S3Client s3Client;
+
+    @Autowired
+    private S3AsyncClient s3AsyncClient;
 
     @Override
     public Flux<String> getImages(String propertyId) {
@@ -38,44 +41,70 @@ public class S3ServiceImpl implements S3Service {
 
     }
     @Override
-    public Mono<String> uploadImages(String propertyId, MultipartFile image) {
-        return Mono.fromCallable(()->{
+    public Mono<String> uploadImage(String propertyId, FilePart filePart ) {
 
-                String fileUrl = "";
-                String filename = image.getOriginalFilename();
-        try{
-            String imgFile = "properties/" + propertyId + "/" + image.getOriginalFilename();
+        String fileName = propertyId + "/" + UUID.randomUUID() + "-" + filePart.filename();
+
+        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(fileName)
+                .contentType(filePart.headers().getContentType().toString())
+                .build();
+
+        return filePart.content()
+                .map(dataBuffer -> {
+                    byte[] bytes = new byte[dataBuffer.readableByteCount()];
+                    dataBuffer.read(bytes);
+                    //dataBuffer.release(); // Libérer le buffer
+                    return bytes;
+                })
+                .reduce((bytes1, bytes2) -> {
+                    byte[] combined = new byte[bytes1.length + bytes2.length];
+                    System.arraycopy(bytes1, 0, combined, 0, bytes1.length);
+                    System.arraycopy(bytes2, 0, combined, bytes1.length, bytes2.length);
+                    return combined;
+                })
+                .flatMap(bytes -> Mono.fromFuture(
+                        s3AsyncClient.putObject(putObjectRequest, AsyncRequestBody.fromBytes(bytes))
+                ))
+                .map(response -> "https://" + bucketName + ".s3.amazonaws.com/" + fileName)
+                .onErrorResume(e -> Mono.error(new RuntimeException("Échec de l'upload vers S3 : " + e.getMessage())));
+    }
+
+    @Override
+    public Flux<String> uploadImages(String propertyId, Flux<FilePart> fileParts) {
+        return fileParts.flatMap( filePart -> {
+
+            String fileName = propertyId + "/" + UUID.randomUUID() + "-" + filePart.filename();
+
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(bucketName)
-                    .key(imgFile)
-                    .contentType(image.getContentType())
+                    .key(fileName)
+                    .contentType(filePart.headers().getContentType().toString())
                     .build();
-            s3Client.putObject(putObjectRequest,RequestBody.fromBytes(image.getBytes()));
-            fileUrl = "https://" + bucketName + ".s3.amazonaws.com/"+ filename;
-        }catch(Exception ex){
-            log.error(ex.getMessage());
-            throw new RuntimeException("",ex);
-        }
-        return fileUrl;
+
+            return filePart.content()
+                    .map(dataBuffer -> {
+                        byte[] bytes = new byte[dataBuffer.readableByteCount()];
+                        dataBuffer.read(bytes);
+                        //dataBuffer.release(); // Libérer le buffer
+                        return bytes;
+                    })
+                    .reduce((bytes1, bytes2) -> {
+                        byte[] combined = new byte[bytes1.length + bytes2.length];
+                        System.arraycopy(bytes1, 0, combined, 0, bytes1.length);
+                        System.arraycopy(bytes2, 0, combined, bytes1.length, bytes2.length);
+                        return combined;
+                    })
+                    .flatMap(bytes -> Mono.fromFuture(
+                            s3AsyncClient.putObject(putObjectRequest, AsyncRequestBody.fromBytes(bytes))
+                    ))
+                    .map(response -> "https://" + bucketName + ".s3.amazonaws.com/" + fileName)
+                    .onErrorResume(e -> Mono.error(new RuntimeException("Échec de l'upload vers S3 : " + e.getMessage())));
+
         });
     }
 
-
-    @Override
-    public Flux<String> uploadImages(String propertyId, List<MultipartFile> images) {
-        return Flux.fromIterable(images)
-                .flatMap(image -> {
-                    return Mono.fromCallable(()->{
-                        String filename = "";
-                        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                                .bucket(bucketName)
-                                .key(filename)
-                                .contentType(image.getContentType())
-                                .build();
-                        s3Client.putObject(putObjectRequest, RequestBody.fromBytes(image.getBytes()));
-                        return "https://" + bucketName +".s3.amazonaws.com/"+ filename;
-                    }).onErrorMap(e-> new RuntimeException(""));
-                });
-    }
-
 }
+
+
