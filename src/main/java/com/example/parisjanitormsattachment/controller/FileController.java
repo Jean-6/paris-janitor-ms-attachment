@@ -1,5 +1,10 @@
 package com.example.parisjanitormsattachment.controller;
 import com.example.parisjanitormsattachment.service.impl.S3ServiceImpl;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +29,15 @@ public class FileController {
     @Autowired
     private S3ServiceImpl s3Service;
 
+
+    @Operation(summary = "Retrieve images for a property",
+            description = "Fetch a list of image URLs associated with a given property ID.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Images retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Property not found",
+                    content = @Content(schema = @Schema())),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @GetMapping(value ="/{propId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Flux<String>> getImages(@PathVariable String propId) {
         Flux<String> stringFlux=s3Service.getImages(propId)
@@ -35,6 +49,15 @@ public class FileController {
                 .body(stringFlux);
     }
 
+
+    @Operation(summary = "Upload documents for a property",
+            description = "Upload multiple documents for a given property ID and store them in S3.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Documents uploaded successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid document upload request",
+                    content = @Content(schema = @Schema())),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @PostMapping(value = "/upload/doc/{propId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<ResponseEntity<List<String>>> uploadDocuments(
             @PathVariable String propId,

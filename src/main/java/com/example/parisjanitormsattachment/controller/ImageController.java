@@ -2,6 +2,11 @@ package com.example.parisjanitormsattachment.controller;
 
 
 import com.example.parisjanitormsattachment.service.impl.S3ServiceImpl;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +32,14 @@ public class ImageController {
     private S3ServiceImpl s3Service;
 
 
+    @Operation(summary = "Upload images for a property",
+            description = "Upload multiple images for a given property ID and store them in S3.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Images uploaded successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid image upload request",
+                    content = @Content(schema = @Schema())),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @PostMapping(value = "/upload/img/{propId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<ResponseEntity<List<String>>> uploadImages(
             @PathVariable String propId,
