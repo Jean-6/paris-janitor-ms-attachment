@@ -23,23 +23,23 @@ import java.util.List;
 @Service
 @RestController
 @RequestMapping("/api/attachment")
-@Tag(name = "Attachment API", description = "Gestion des documents")
+@Tag(name = "Documents API", description = "Documents Management")
 public class FileController {
 
     @Autowired
     private S3ServiceImpl s3Service;
 
 
-    @Operation(summary = "Retrieve images for a property",
+    @Operation(summary = "Retrieved documents for a property",
             description = "Fetch a list of image URLs associated with a given property ID.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Images retrieved successfully"),
+            @ApiResponse(responseCode = "200", description = "Documents retrieved successfully"),
             @ApiResponse(responseCode = "404", description = "Property not found",
                     content = @Content(schema = @Schema())),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping(value ="/{propId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Flux<String>> getImages(@PathVariable String propId) {
+    public ResponseEntity<Flux<String>> getDocuments(@PathVariable String propId) {
         Flux<String> stringFlux=s3Service.getImages(propId)
                 .doOnNext(log::info).onErrorResume(error->{
                     log.info(error.getMessage());
@@ -48,7 +48,6 @@ public class FileController {
         return ResponseEntity.status(HttpStatus.OK)
                 .body(stringFlux);
     }
-
 
     @Operation(summary = "Upload documents for a property",
             description = "Upload multiple documents for a given property ID and store them in S3.")

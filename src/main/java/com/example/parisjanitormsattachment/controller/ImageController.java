@@ -25,7 +25,7 @@ import java.util.List;
 @Service
 @RestController
 @RequestMapping("/api/attachment")
-@Tag(name = "Attachment API", description = "Gestion des images")
+@Tag(name = "Images API", description = "Images Management")
 public class ImageController {
 
     @Autowired
