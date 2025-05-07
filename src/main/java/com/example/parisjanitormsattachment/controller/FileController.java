@@ -1,6 +1,4 @@
 package com.example.parisjanitormsattachment.controller;
-
-
 import com.example.parisjanitormsattachment.service.impl.S3ServiceImpl;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -20,19 +18,29 @@ import java.util.List;
 @Service
 @RestController
 @RequestMapping("/api/attachment")
-@Tag(name = "Attachment API", description = "Gestion des images")
-public class ImageController {
+@Tag(name = "Attachment API", description = "Gestion des documents")
+public class FileController {
 
     @Autowired
     private S3ServiceImpl s3Service;
 
+    @GetMapping(value ="/{propId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Flux<String>> getImages(@PathVariable String propId) {
+        Flux<String> stringFlux=s3Service.getImages(propId)
+                .doOnNext(log::info).onErrorResume(error->{
+                    log.info(error.getMessage());
+                    return Flux.error(error);
+                });
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(stringFlux);
+    }
 
-    @PostMapping(value = "/upload/img/{propId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Mono<ResponseEntity<List<String>>> uploadImages(
+    @PostMapping(value = "/upload/doc/{propId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Mono<ResponseEntity<List<String>>> uploadDocuments(
             @PathVariable String propId,
-            @RequestPart("pictures") Flux<FilePart> pictures) {
+            @RequestPart("documents") Flux<FilePart> documents) {
 
-        return s3Service.uploads(propId,"pictures", pictures)
+        return s3Service.uploads(propId,"documents", documents)
                 .collectList()
                 .map(urls -> ResponseEntity.status(HttpStatus.OK).body(urls))
                 .onErrorResume(e -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of(e.getMessage()))));
