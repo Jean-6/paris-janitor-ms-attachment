@@ -1,6 +1,8 @@
 package com.example.parisjanitormsattachment.controller;
 
 
+import com.example.parisjanitormsattachment.model.Image;
+import com.example.parisjanitormsattachment.repository.ImageRepository;
 import com.example.parisjanitormsattachment.service.impl.S3ServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -30,6 +32,8 @@ public class ImageController {
 
     @Autowired
     private S3ServiceImpl s3Service;
+    @Autowired
+    private ImageRepository imageRepository;
 
 
     @Operation(summary = "Upload images for a property",
@@ -49,5 +53,25 @@ public class ImageController {
                 .collectList()
                 .map(urls -> ResponseEntity.status(HttpStatus.OK).body(urls))
                 .onErrorResume(e -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of(e.getMessage()))));
+    }
+
+    @Operation(summary = "Retrieve all images",
+            description = "Fetch all images available in the database.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Images retrieved successfully"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping(value = "images/", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Flux<Image>> getImages() {
+
+        Flux<Image> images = imageRepository.findAll()
+                .doOnNext(image -> {
+                    log.info("Image retrieved successfully");
+                })
+                .onErrorResume(error->{
+                    log.error(error.getMessage());
+                    return Flux.empty();
+                });
+        return ResponseEntity.ok().body(images);
     }
 }
