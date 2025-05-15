@@ -74,4 +74,26 @@ public class ImageController {
                 });
         return ResponseEntity.ok().body(images);
     }
+
+    @Operation(summary = "Retrieve images for a property",
+            description = "Fetch multiple images for a given property ID from the database.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Images retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Property not found",
+                    content = @Content(schema = @Schema())),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping(value = "images/property/{propertyId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Flux<Image>> getImages( @PathVariable String propertyId) {
+
+        Flux<Image> images = imageRepository.findByPropertyId(propertyId)
+                .doOnNext(image -> {
+                    log.info("Image retrieved successfully");
+                })
+                .onErrorResume(error->{
+                    log.error(error.getMessage());
+                    return Flux.empty();
+                });
+        return ResponseEntity.ok().body(images);
+    }
 }
