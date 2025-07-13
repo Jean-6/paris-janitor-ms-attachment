@@ -1,14 +1,15 @@
 package com.example.parisjanitormsattachment.service;
 
 import com.example.parisjanitormsattachment.dto.DocumentMsg;
+import com.example.parisjanitormsattachment.model.Document;
 
 public interface DocumentConsumer {
 
-    public void handleIdentity(DocumentMsg msg);
+    void handleIdentity(DocumentMsg msg);
 
-    public void handleSiret(DocumentMsg msg);
+    void handleSiret(DocumentMsg msg);
 
-    public void handleRib(DocumentMsg msg);
+    void handleRib(DocumentMsg msg);
 
-    public void saveFile(DocumentMsg msg);
+    Document saveFile(Long userId, String docType, String filename, String url);
 }

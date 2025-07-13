@@ -5,8 +5,9 @@ import java.io.Serializable;
 public record DocumentMsg (
         Long userId,
         String docType,
-        String fileName,
-        String filePath
+        String s3Url,
+        byte[] content,
+        String filename
 ) implements Serializable{}
 
 
